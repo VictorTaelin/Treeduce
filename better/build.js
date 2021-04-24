@@ -16,7 +16,7 @@ function build_rule(func, tree) {
       }
       code += tabs(tab) + "return " + done + ";\n";
     } else {
-      code += tabs(tab) + "var arg"+n+" = mem.val[get_dest(func)+"+n+"];\n";
+      code += tabs(tab) + "var arg"+n+" = mem.nodes[get_dest(func)+"+n+"];\n";
       if (tree._) {
         elim(tree._("arg"+n), n + 1, tab, free, used);
       } else {
@@ -28,7 +28,7 @@ function build_rule(func, tree) {
           var next = tree[ctor];
           while (typeof next === "function") {
           //for (var i = 0; i < kind_to_arity[name_to_kind[ctor]]; ++i) {
-            code += tabs(tab+4)+"var arg"+n+"_"+i+" = mem.val[get_dest(arg"+n+")+"+i+"];\n";
+            code += tabs(tab+4)+"var arg"+n+"_"+i+" = mem.nodes[get_dest(arg"+n+")+"+i+"];\n";
             used["arg"+n+"_"+i] = false;
             next = next("arg"+n+"_"+i);
             ++i;
