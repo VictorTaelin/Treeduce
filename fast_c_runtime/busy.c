@@ -105,10 +105,10 @@ typedef struct {
 
 // Initializes the memory
 void init_memory(Memory* mem, u32 max_nodes, u32 max_reuse) {
-  mem->nodes = (u32*) malloc(sizeof(u32) * max_nodes);
+  mem->nodes = malloc(sizeof *mem->nodes * max_nodes);
   mem->count = 0;
   for (int i = 0; i < 16; ++i) {
-    mem->reuse[i] = (u32*) malloc(sizeof(u32) * max_reuse);
+    mem->reuse[i] = malloc(sizeof *mem->reuse[i] * max_reuse);
     mem->freed[i] = 0;
   }
 }
