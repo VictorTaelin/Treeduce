@@ -140,38 +140,50 @@ u32 make8(Memory* mem, u32 kind, u32 val0, u32 val1, u32 val2, u32 val3, u32 val
   return ptr(kind, dest);
 }
 
-const u32 O   = 1;
-const u32 I   = 2;
-const u32 E   = 3;
-const u32 Inc = 4;
-const u32 Rev = 5;
-const u32 Fn0 = 6;
-const u32 Fn1 = 7;
-const u32 Fn2 = 8;
-const u32 MAX = 8;
+const u32 S = 1;
+const u32 Z = 2;
+const u32 O = 3;
+const u32 I = 4;
+const u32 E = 5;
+const u32 P = 6;
+const u32 Inc = 7;
+const u32 Add = 8;
+const u32 Cpy = 9;
+const u32 Map = 10;
+const u32 Slow = 11;
+const u32 SlowGo = 12;
+const u32 MAX = 13;
 
 const u32 kind_to_arity[] = {
   0, // Air
+  1, // S
+  0, // Z
   1, // O
   1, // I
   0, // E
+  2, // P
   1, // Inc
-  2, // Rev
-  1, // Fn0
-  3, // Fn1
-  2, // Fn2
+  2, // Add
+  1, // Cpy
+  1, // Map
+  1, // Slow
+  1, // SlowGo
 };
 
 const char* kind_to_name[] = {
   "Air",
+  "S",
+  "Z",
   "O",
   "I",
   "E",
+  "P",
   "Inc",
-  "Rev",
-  "Fn0",
-  "Fn1",
-  "Fn2",
+  "Add",
+  "Cpy",
+  "Map",
+  "Slow",
+  "SlowGo",
 };
 
 u32 name_to_kind(char* name) {
@@ -218,107 +230,145 @@ u32 rewrite(Memory* mem, u32 func) {
       }
     }
 
-    case Rev: {
+    case Add: {
       u32 arg0 = mem->nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
         case E: {
           u32 arg1 = mem->nodes[get_dest(func)+1];
-          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return arg1;
+          switch (get_kind(arg1)) {
+            case E: {
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make0(mem,E);
+            }
+            case O: {
+              u32 arg1_0 = mem->nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,O,arg1_0);
+            }
+            case I: {
+              u32 arg1_0 = mem->nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,I,arg1_0);
+            }
+          }
         }
         case O: {
           u32 arg0_0 = mem->nodes[get_dest(arg0)+0];
           u32 arg1 = mem->nodes[get_dest(func)+1];
-          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make2(mem,Rev,arg0_0,make1(mem,O,arg1));
+          switch (get_kind(arg1)) {
+            case E: {
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,O,arg0_0);
+            }
+            case O: {
+              u32 arg1_0 = mem->nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,O,make2(mem,Add,arg0_0,arg1_0));
+            }
+            case I: {
+              u32 arg1_0 = mem->nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,I,make2(mem,Add,arg0_0,arg1_0));
+            }
+          }
         }
         case I: {
           u32 arg0_0 = mem->nodes[get_dest(arg0)+0];
           u32 arg1 = mem->nodes[get_dest(func)+1];
-          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make2(mem,Rev,arg0_0,make1(mem,I,arg1));
+          switch (get_kind(arg1)) {
+            case E: {
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,I,arg0_0);
+            }
+            case O: {
+              u32 arg1_0 = mem->nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,I,make2(mem,Add,arg0_0,arg1_0));
+            }
+            case I: {
+              u32 arg1_0 = mem->nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,O,make1(mem,Inc,make2(mem,Add,arg0_0,arg1_0)));
+            }
+          }
         }
       }
     }
 
-    case Fn0: {
+    case Cpy: {
       u32 arg0 = mem->nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
-        case E: {
+        case Z: {
           freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
           freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,make1(mem,Inc,make0(mem,E)),make0(mem,E),make0(mem,E));
+          return make2(mem,P,make0(mem,Z),make0(mem,Z));
         }
-        case O: {
+        case S: {
           u32 arg0_0 = mem->nodes[get_dest(arg0)+0];
           freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
           freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,make1(mem,Inc,make1(mem,O,arg0_0)),make0(mem,E),make0(mem,E));
-        }
-        case I: {
-          u32 arg0_0 = mem->nodes[get_dest(arg0)+0];
-          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,make1(mem,Inc,make1(mem,I,arg0_0)),make0(mem,E),make0(mem,E));
+          return make1(mem,Map,make1(mem,Cpy,arg0_0));
         }
       }
     }
 
-    case Fn1: {
+    case Map: {
       u32 arg0 = mem->nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
-        case E: {
-          u32 arg1 = mem->nodes[get_dest(func)+1];
-          u32 arg2 = mem->nodes[get_dest(func)+2];
-          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make2(mem,Fn2,arg1,arg2);
-        }
-        case O: {
+        case P: {
           u32 arg0_0 = mem->nodes[get_dest(arg0)+0];
-          u32 arg1 = mem->nodes[get_dest(func)+1];
-          u32 arg2 = mem->nodes[get_dest(func)+2];
+          u32 arg0_1 = mem->nodes[get_dest(arg0)+1];
           freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
           freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,arg0_0,make1(mem,O,arg1),make1(mem,O,arg2));
-        }
-        case I: {
-          u32 arg0_0 = mem->nodes[get_dest(arg0)+0];
-          u32 arg1 = mem->nodes[get_dest(func)+1];
-          u32 arg2 = mem->nodes[get_dest(func)+2];
-          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,arg0_0,make1(mem,I,arg1),make1(mem,I,arg2));
+          return make2(mem,P,make1(mem,S,arg0_0),make1(mem,S,arg0_1));
         }
       }
     }
 
-    case Fn2: {
+    case Slow: {
       u32 arg0 = mem->nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
-        case E: {
-          u32 arg1 = mem->nodes[get_dest(func)+1];
+        case Z: {
           freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
           freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return arg1;
+          return make1(mem,I,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make0(mem,E)))))))))))))))))))))))))))))))));
         }
-        case O: {
+        case S: {
           u32 arg0_0 = mem->nodes[get_dest(arg0)+0];
-          u32 arg1 = mem->nodes[get_dest(func)+1];
           freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
           freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          collect(mem, arg0_0);
-          return make1(mem,Fn0,make2(mem,Rev,arg1,make0(mem,E)));
+          return make1(mem,SlowGo,make1(mem,Cpy,arg0_0));
         }
-        case I: {
+      }
+    }
+
+    case SlowGo: {
+      u32 arg0 = mem->nodes[get_dest(func)+0];
+      switch (get_kind(arg0)) {
+        case P: {
           u32 arg0_0 = mem->nodes[get_dest(arg0)+0];
-          u32 arg1 = mem->nodes[get_dest(func)+1];
+          u32 arg0_1 = mem->nodes[get_dest(arg0)+1];
           freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
           freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make2(mem,Fn2,arg0_0,arg1);
+          return make2(mem,Add,make1(mem,Slow,arg0_0),make1(mem,Slow,arg0_1));
         }
       }
     }
@@ -469,7 +519,7 @@ int main() {
   char text[65536];
   u32 main, count = 0;
 
-  main = read(&mem, "(Fn0 (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (E))))))))))))))))))))))))))");
+  main = read(&mem, "(Slow (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (Z))))))))))))))))))))))");
   main = reduce(&mem, main);
 
   show(&mem, main, text, &count);

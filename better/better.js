@@ -1,3 +1,5 @@
+var rewrites = 0;
+
 function Memory() {
   return {
     nodes: [],
@@ -19,7 +21,7 @@ function alloc(mem, size) {
   }
 }
 
-function free(mem, dest, size) {
+function freed(mem, dest, size) {
   mem.reuse[size][mem.freed[size]++] = dest;
 }
 
@@ -120,74 +122,69 @@ function make8(mem, kind, val0, val1, val2, val3, val4, val5, val6, val7) {
 //data Bits = O Bits | I Bits | E deriving Show
 //data Pair a b = Make a b
 
-//inc E     = E
-//inc (O x) = (I x)
-//inc (I x) = O (inc x)
-
-//add E     E     = E
-//add E     (O b) = O b
-//add E     (I b) = I b
-//add (O a) E     = O a
-//add (O a) (O b) = O (add a b)
-//add (O a) (I b) = I (add a b)
-//add (I a) E     = I a
-//add (I a) (O b) = I (add a b)
-//add (I a) (I b) = O (inc (add a b))
-
-//dup Z     = Make Z Z
-//dup (S x) = mapS (dup x)
-
-//mapS (Make a b) = Make (S a) (S b)
-
-//slow Z     = I (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O E)))))))))))))))
-//slow (S x) = slowGo (dup x)
-
-//slowGo (Make a b) = add (slow a) (slow b)
-
-//main :: IO ()
-//main = print (slow (S (S (S (S Z)))))
-
-var O   = 1;
-var I   = 2;
-var E   = 3;
-var Inc = 4;
-var Rev = 5;
-var Fn0 = 6;
-var Fn1 = 7;
-var Fn2 = 8;
+var S = 1;
+var Z = 2;
+var O = 3;
+var I = 4;
+var E = 5;
+var P = 6;
+var Inc = 7;
+var Add = 8;
+var Cpy = 9;
+var Map = 10;
+var Slow = 11;
+var SlowGo = 12;
 
 var kind_to_arity = {
+  [0]: 0,
+  [S]: 1,
+  [Z]: 0,
   [O]: 1,
   [I]: 1,
   [E]: 0,
+  [P]: 2,
   [Inc]: 1,
-  [Rev]: 2,
-  [Fn0]: 1,
-  [Fn1]: 3,
-  [Fn2]: 2,
+  [Add]: 2,
+  [Cpy]: 1,
+  [Map]: 1,
+  [Slow]: 1,
+  [SlowGo]: 1,
 };
 
 var kind_to_name = {
+  [0]: "Air",
+  [S]: "S",
+  [Z]: "Z",
   [O]: "O",
   [I]: "I",
   [E]: "E",
+  [P]: "P",
   [Inc]: "Inc",
-  [Rev]: "Rev",
-  [Fn0]: "Fn0",
-  [Fn1]: "Fn1",
-  [Fn2]: "Fn2",
+  [Add]: "Add",
+  [Cpy]: "Cpy",
+  [Map]: "Map",
+  [Slow]: "Slow",
+  [SlowGo]: "SlowGo",
 }
 
 var name_to_kind = {
+  Air: 0,
+  S: S,
+  Z: Z,
   O: O,
   I: I,
   E: E,
+  P: P,
   Inc: Inc,
-  Rev: Rev,
-  Fn0: Fn0,
-  Fn1: Fn1,
-  Fn2: Fn2,
+  Add: Add,
+  Cpy: Cpy,
+  Map: Map,
+  Slow: Slow,
+  SlowGo: SlowGo,
 };
+
+//main :: IO ()
+//main = print (slow (S (S (S (S Z)))))
 
 // Garbage-collects
 function collect(mem, term) {
@@ -195,120 +192,177 @@ function collect(mem, term) {
   for (var i = 0; i < arity; ++i) {
     collect(mem, mem.nodes[get_dest(term) + i]);
   }
-  free(mem, get_dest(term), arity);
+  freed(mem, get_dest(term), arity);
 }
 
 // Applies a single rewrite
 function rewrite(mem, func) {
   switch (get_kind(func)) {
-    case Inc:
+    case Inc: {
       var arg0 = mem.nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
-        case E:
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+        case E: {
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
           return make0(mem,E);
-        case O:
+        }
+        case O: {
           var arg0_0 = mem.nodes[get_dest(arg0)+0];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
           return make1(mem,I,arg0_0);
-        case I:
+        }
+        case I: {
           var arg0_0 = mem.nodes[get_dest(arg0)+0];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
           return make1(mem,O,make1(mem,Inc,arg0_0));
+        }
       }
+    }
 
-    case Rev:
+    case Add: {
       var arg0 = mem.nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
-        case E:
+        case E: {
           var arg1 = mem.nodes[get_dest(func)+1];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return arg1;
-        case O:
+          switch (get_kind(arg1)) {
+            case E: {
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make0(mem,E);
+            }
+            case O: {
+              var arg1_0 = mem.nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,O,arg1_0);
+            }
+            case I: {
+              var arg1_0 = mem.nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,I,arg1_0);
+            }
+          }
+        }
+        case O: {
           var arg0_0 = mem.nodes[get_dest(arg0)+0];
           var arg1 = mem.nodes[get_dest(func)+1];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make2(mem,Rev,arg0_0,make1(mem,O,arg1));
-        case I:
+          switch (get_kind(arg1)) {
+            case E: {
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,O,arg0_0);
+            }
+            case O: {
+              var arg1_0 = mem.nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,O,make2(mem,Add,arg0_0,arg1_0));
+            }
+            case I: {
+              var arg1_0 = mem.nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,I,make2(mem,Add,arg0_0,arg1_0));
+            }
+          }
+        }
+        case I: {
           var arg0_0 = mem.nodes[get_dest(arg0)+0];
           var arg1 = mem.nodes[get_dest(func)+1];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make2(mem,Rev,arg0_0,make1(mem,I,arg1));
+          switch (get_kind(arg1)) {
+            case E: {
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,I,arg0_0);
+            }
+            case O: {
+              var arg1_0 = mem.nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,I,make2(mem,Add,arg0_0,arg1_0));
+            }
+            case I: {
+              var arg1_0 = mem.nodes[get_dest(arg1)+0];
+              freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+              freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+              freed(mem, get_dest(arg1), kind_to_arity[get_kind(arg1)]);
+              return make1(mem,O,make1(mem,Inc,make2(mem,Add,arg0_0,arg1_0)));
+            }
+          }
+        }
       }
+    }
 
-    case Fn0:
+    case Cpy: {
       var arg0 = mem.nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
-        case E:
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,make1(mem,Inc,make0(mem,E)),make0(mem,E),make0(mem,E));
-        case O:
+        case Z: {
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+          return make2(mem,P,make0(mem,Z),make0(mem,Z));
+        }
+        case S: {
           var arg0_0 = mem.nodes[get_dest(arg0)+0];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,make1(mem,Inc,make1(mem,O,arg0_0)),make0(mem,E),make0(mem,E));
-        case I:
-          var arg0_0 = mem.nodes[get_dest(arg0)+0];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,make1(mem,Inc,make1(mem,I,arg0_0)),make0(mem,E),make0(mem,E));
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+          return make1(mem,Map,make1(mem,Cpy,arg0_0));
+        }
       }
+    }
 
-    case Fn1:
+    case Map: {
       var arg0 = mem.nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
-        case E:
-          var arg1 = mem.nodes[get_dest(func)+1];
-          var arg2 = mem.nodes[get_dest(func)+2];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make2(mem,Fn2,arg1,arg2);
-        case O:
+        case P: {
           var arg0_0 = mem.nodes[get_dest(arg0)+0];
-          var arg1 = mem.nodes[get_dest(func)+1];
-          var arg2 = mem.nodes[get_dest(func)+2];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,arg0_0,make1(mem,O,arg1),make1(mem,O,arg2));
-        case I:
-          var arg0_0 = mem.nodes[get_dest(arg0)+0];
-          var arg1 = mem.nodes[get_dest(func)+1];
-          var arg2 = mem.nodes[get_dest(func)+2];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make3(mem,Fn1,arg0_0,make1(mem,I,arg1),make1(mem,I,arg2));
+          var arg0_1 = mem.nodes[get_dest(arg0)+1];
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+          return make2(mem,P,make1(mem,S,arg0_0),make1(mem,S,arg0_1));
+        }
       }
+    }
 
-    case Fn2:
+    case Slow: {
       var arg0 = mem.nodes[get_dest(func)+0];
       switch (get_kind(arg0)) {
-        case E:
-          var arg1 = mem.nodes[get_dest(func)+1];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return arg1;
-        case O:
+        case Z: {
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+          return make1(mem,I,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make1(mem,O,make0(mem,E)))))))))))))))))))))))))))))))));
+        }
+        case S: {
           var arg0_0 = mem.nodes[get_dest(arg0)+0];
-          var arg1 = mem.nodes[get_dest(func)+1];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          collect(mem, arg0_0);
-          return make1(mem,Fn0,make2(mem,Rev,arg1,make0(mem,E)));
-        case I:
-          var arg0_0 = mem.nodes[get_dest(arg0)+0];
-          var arg1 = mem.nodes[get_dest(func)+1];
-          free(mem, get_dest(func), kind_to_arity[get_kind(func)]);
-          free(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
-          return make2(mem,Fn2,arg0_0,arg1);
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+          return make1(mem,SlowGo,make1(mem,Cpy,arg0_0));
+        }
       }
+    }
 
+    case SlowGo: {
+      var arg0 = mem.nodes[get_dest(func)+0];
+      switch (get_kind(arg0)) {
+        case P: {
+          var arg0_0 = mem.nodes[get_dest(arg0)+0];
+          var arg0_1 = mem.nodes[get_dest(arg0)+1];
+          freed(mem, get_dest(func), kind_to_arity[get_kind(func)]);
+          freed(mem, get_dest(arg0), kind_to_arity[get_kind(arg0)]);
+          return make2(mem,Add,make1(mem,Slow,arg0_0),make1(mem,Slow,arg0_1));
+        }
+      }
+    }
   }
   return -1;
 }
@@ -322,6 +376,7 @@ function reduce(mem, term) {
     var down = stack[count - 1].down;
     var norm = rewrite(mem, term);
     if (norm !== -1) {
+      ++rewrites;
       if (count <= 1) {
         stack[count - 1].term = norm;
         stack[count - 1].down = 0;
@@ -423,11 +478,11 @@ function show(mem, ptr) {
   return text;
 }
 
-var {mem, ptr: root} = read("(Fn0 (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (O (E))))))))))))))))))))))))");
+var {mem, ptr: root} = read("(Slow (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S (S Z)))))))))))))))))))))");
 console.log(show(mem, root));
 
 var norm = reduce(mem, root);
 console.log(show(mem, norm));
 
-console.log("mem_len:", mem.freed);
-//console.log("rewrite:", global.rewrites);
+console.log("mem_len:", mem.count);
+console.log("rewrite:", rewrites);
