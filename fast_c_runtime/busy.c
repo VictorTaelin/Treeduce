@@ -247,19 +247,22 @@ u32 make8(Memory* mem, u32 kind, u32 val0, u32 val1, u32 val2, u32 val3, u32 val
 }
 
 // Tags (kinds) for the constructors and functions of the compiled program
-const u32 S      = 1;
-const u32 Z      = 2;
-const u32 O      = 3;
-const u32 I      = 4;
-const u32 E      = 5;
-const u32 P      = 6;
-const u32 Inc    = 7;
-const u32 Add    = 8;
-const u32 Cpy    = 9;
-const u32 Map    = 10;
-const u32 Slow   = 11;
-const u32 SlowGo = 12;
-const u32 MAX    = 13;
+enum {
+  Air,
+  S,
+  Z,
+  O,
+  I,
+  E,
+  P,
+  Inc,
+  Add,
+  Cpy,
+  Map,
+  Slow,
+  SlowGo,
+  MAX,
+}
 
 // Gets the arity (number of fields) of a kind
 const u32 kind_to_arity[] = {
