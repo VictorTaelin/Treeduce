@@ -34,7 +34,6 @@ function collect(mem, term) {
   freed(mem, get_dest(term), arity);
 }
 
-
 function ptr(kind, dest) {
   return kind | (dest << 8)
 }

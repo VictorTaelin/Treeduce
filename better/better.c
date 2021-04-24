@@ -48,15 +48,6 @@ void freed(Memory* mem, u32 dest, u32 size) {
   mem->reuse[size][mem->freed[size]++] = dest;
 }
 
-// Garbage-collects
-void collect(Memory* mem, u32 term) {
-  u32 arity = kind_to_arity[get_kind(term)];
-  for (u32 i = 0; i < arity; ++i) {
-    collect(mem, mem->nodes[get_dest(term) + i]);
-  }
-  freed(mem, get_dest(term), arity);
-}
-
 u32 ptr(u32 kind, u32 dest) {
   return kind | (dest << 8);
 }
@@ -202,6 +193,15 @@ u32 name_to_kind(char* name) {
     }
   }
   return -1;
+}
+
+// Garbage-collects
+void collect(Memory* mem, u32 term) {
+  u32 arity = kind_to_arity[get_kind(term)];
+  for (u32 i = 0; i < arity; ++i) {
+    collect(mem, mem->nodes[get_dest(term) + i]);
+  }
+  freed(mem, get_dest(term), arity);
 }
 
 // Applies a single rewrite
