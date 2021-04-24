@@ -25,6 +25,16 @@ function freed(mem, dest, size) {
   mem.reuse[size][mem.freed[size]++] = dest;
 }
 
+// Garbage-collects
+function collect(mem, term) {
+  var arity = kind_to_arity[get_kind(term)];
+  for (var i = 0; i < arity; ++i) {
+    collect(mem, mem.nodes[get_dest(term) + i]);
+  }
+  freed(mem, get_dest(term), arity);
+}
+
+
 function ptr(kind, dest) {
   return kind | (dest << 8)
 }
@@ -185,15 +195,6 @@ var name_to_kind = {
 
 //main :: IO ()
 //main = print (slow (S (S (S (S Z)))))
-
-// Garbage-collects
-function collect(mem, term) {
-  var arity = kind_to_arity[get_kind(term)];
-  for (var i = 0; i < arity; ++i) {
-    collect(mem, mem.nodes[get_dest(term) + i]);
-  }
-  freed(mem, get_dest(term), arity);
-}
 
 // Applies a single rewrite
 function rewrite(mem, func) {
