@@ -1,3 +1,5 @@
+// This is the same as busy.c, but in JavaScript
+
 var rewrites = 0;
 
 function Memory() {
