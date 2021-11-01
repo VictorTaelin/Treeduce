@@ -645,23 +645,28 @@ int main() {
   //printf("%llu\n", get_kind(ptr(Z,0)));
 
   //Ptr main = read("(P (Slow (S (S (Z)))) (Slow (S (S (Z)))))");
-  Ptr main = read("(P(P(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z)))))))))))))))))))))))(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))))(P(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z)))))))))))))))))))))))(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z)))))))))))))))))))))))))");
+  Ptr main = read("(P(P(P(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z)))))))))))))))))))))))(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))))(P(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z)))))))))))))))))))))))(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z)))))))))))))))))))))))))(P(P(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z)))))))))))))))))))))))(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))))(P(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z)))))))))))))))))))))))(P(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))(Slow(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(S(Z))))))))))))))))))))))))))");
+  print(get_args(main)[29]);
+  // 6 7 8 9 12 13 14 15 20 21 22 23 26 27 28 29
+
 
   // MULTI THREADED
 
-  pthread_t thread[8];
-  Ptr vals[8];
-  for (int i = 0; i < 8; ++i) {
-    vals[i] = get_args(main)[i + (i < 4 ? 4 : 6)];
+  const int threads = 16;
+  const int indices[] = {6, 7, 8, 9, 12, 13, 14, 15, 20, 21, 22, 23, 26, 27, 28, 29};
+  pthread_t thread[threads];
+  Ptr vals[threads];
+  for (int i = 0; i < threads; ++i) {
+    vals[i] = get_args(main)[indices[i]];
   }
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < threads; ++i) {
     pthread_create(&thread[i], NULL, &reducer, &vals[i]);
   }
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < threads; ++i) {
     pthread_join(thread[i], NULL);
   }
-  for (int i = 0; i < 8; ++i) {
-    get_args(main)[i + (i < 4 ? 4 : 6)] = vals[i];
+  for (int i = 0; i < threads; ++i) {
+    get_args(main)[indices[i]] = vals[i];
   }
 
   // SINGLE THREADED
